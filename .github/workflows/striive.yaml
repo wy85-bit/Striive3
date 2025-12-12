@@ -1,0 +1,48 @@
+name: Striive Vacancy Scraper
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"  # Runs every day at 06:00 UTC — adjust if needed
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        lfs: true  # needed if striive_profile includes large cookie files
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        pip install playwright
+        playwright install chromium
+
+    - name: Install Xvfb (required for Playwright headed mode in CI)
+      run: sudo apt-get install -y xvfb
+
+    - name: Run scraper using persistent profile
+      run: |
+        echo "Starting Striive scraper..."
+        xvfb-run -a python striive_scraper.py
+
+    - name: Upload vacancies.json
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: vacancies
+        path: vacancies.json
+
+    - name: Upload debug HTML dumps
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-html
+        path: |
